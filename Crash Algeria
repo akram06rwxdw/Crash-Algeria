@@ -1,0 +1,58 @@
+import tkinter as tk
+from tkinter import StringVar
+import asyncio
+import websockets
+import json
+import threading
+
+# عنوان WebSocket
+url = 'wss://eg1xbet.com/games-frame/sockets/crash?whence=110&fcountry=66&ref=1&gr=0&appGuid=00000000-0000-0000-0000-000000000000&lng=en'
+
+# إنشاء النافذة الرسومية
+root = tk.Tk()
+root.title("Ai LuckyJET | PREDICTOR")
+root.geometry("300x300")
+root.configure(bg="black")
+
+# متغير لحفظ التوقع الحالي
+current_prediction = StringVar()
+current_prediction.set("...")
+
+# إعداد النص للعرض في الواجهة
+label = tk.Label(root, text="Prediction", font=("Arial", 20), fg="purple", bg="black")
+label.pack(pady=10)
+
+prediction_label = tk.Label(root, textvariable=current_prediction, font=("Arial", 50), fg="purple", bg="black")
+prediction_label.pack()
+
+# دالة تحديث التوقع في الواجهة
+def update_prediction(prediction):
+    current_prediction.set(f"{prediction}x")
+
+# الاتصال بـ WebSocket وتحديث التوقع
+async def open_websocket():
+    async with websockets.connect(url) as ws:
+        print("WebSocket مفتوح")
+        
+        # إرسال الرسائل الأولية إلى السيرفر
+        await ws.send('{"protocol":"json","version":1}\x1e')
+        await ws.send('{"arguments":[{"activity":30,"currency":119}],"invocationId":"0","target":"Guest","type":1}\x1e')
+
+        try:
+            async for message in ws:
+                data = json.loads(message[:-1])
+                if data.get('target') == 'OnCrash':
+                    قيمة_الانفجار = data['arguments'][0]['f']
+                    update_prediction(قيمة_الانفجار)
+        except websockets.ConnectionClosed:
+            print("تم إغلاق الاتصال")
+
+# دالة تشغيل WebSocket في خيط جديد
+def start_prediction():
+    asyncio.run(open_websocket())
+
+# تشغيل WebSocket عند بدء البرنامج تلقائيًا
+threading.Thread(target=start_prediction).start()
+
+# تشغيل الواجهة الرسومية
+root.mainloop()
